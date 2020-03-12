@@ -23,7 +23,7 @@ def gen_samples(A,N,density=0.1,normalize=True):
 
   return x,y
 
-def gen_net(properties, *args, **kwargs):
+def gen_net(properties, adamrate, *args, **kwargs):
   f = properties['net_type']
   n = properties['num_stages']
   p = properties['problem']
@@ -42,13 +42,13 @@ def gen_net(properties, *args, **kwargs):
       staircase=False)
     optimizer = tf.keras.optimizers.Adam(lr_schedule)
   else:
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=adamrate)
 
   a.compile(optimizer, loss=tf.keras.losses.MeanSquaredError())
 
   return a
 
-def train_net(a, p, properties, **kwargs):
+def train_net(a, p, data, properties, **kwargs):
   opts = dict(save=True,
                 schedule=False,
                 batch=1000,
@@ -61,6 +61,7 @@ def train_net(a, p, properties, **kwargs):
   n = properties['num_stages']
   p = properties['problem']
 
+  labels,y = data
   a.fit(y, labels, epochs=opts['epochs'], batch_size = opts['batch'])
 
   if opts['save'] == True:
@@ -85,25 +86,35 @@ def print_vars(a):
         print(v.name + ' =', v.numpy())
 
 if __name__ == '__main__':
-  params_init = {'lambda':0.2, 'alpha':1.5, 'rho':1.5}
+  params_init = {'lambda':.1, 'alpha':1.5, 'rho':1.5}
 
-  p = problem.Problem((100,200), 'mimo')
+  p = problem.Problem((100,200), 'siso')
   # d = scipy.io.loadmat('matvars.mat')
   # p.A = d['A']
 
   # sparsity density
-  d = 0.01
+  d = 0.1
 
-  labels,y = gen_samples(p.A, 5e4,density=d, normalize=False)
+  x,y = gen_samples(p.A, 5e4,density=d, normalize=False)
 
-  props = dict(net_type='admm', num_stages=20, problem=p)
+  y = np.matmul(p.A.T.conj(),y.T).T
+  data = x,y
+  props = dict(net_type='admm', 
+              num_stages=20, 
+              problem=p
+          )
 
-  a = gen_net(props, 'tied', params_init=params_init)
-  a = train_net(a, p, props, epochs=10)
+  a = gen_net(props, 
+              1e-3, 
+              'tied', 
+              params_init=params_init
+      )
 
-  x,y = gen_samples(p.A,1e3,density=d, normalize=False)
+  a = train_net(a, p, data, props, epochs=5)
 
-  xhat = a.predict_on_batch(y)
+  x,y = gen_samples(p.A,1e4,density=d, normalize=False)
+
+  xhat = a.predict_on_batch(np.matmul(y,p.A))
   
   # xhat = a.predict(d['y'].T)
   # x = (d['x'].A).T

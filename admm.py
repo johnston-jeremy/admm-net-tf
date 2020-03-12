@@ -106,20 +106,25 @@ class x_update(layers.Layer):
     if 'blank' in args:
       M1_init = np.zeros((n,m))  
       M2_init = np.zeros((n,n))
+      M3_init = np.zeros((n,))
     else:
       AULA = self.AULA(p)
       M1_init = (1/self.rho0)*p.A.T.conj() - (1/self.rho0**2)*np.matmul(AULA,p.A.T.conj())
-      M2_init = np.eye(n) - (1/self.rho0)*AULA
+      # M2_init = np.eye(n) - (1/self.rho0)*AULA
+      M2_init = (1/self.rho0)*(np.eye(n) - (1/self.rho0)*AULA)
+      M3_init = np.ones((n,))
 
     if 'tied' in args:
       tied = True
     else:
       tied = False
 
-    self.M1 = tf.Variable(initial_value=M1_init.astype(np.float32),
-                         trainable=not tied, name='M1')
+    # self.M1 = tf.Variable(initial_value=M1_init.astype(np.float32),
+    #                      trainable=not tied, name='M1')
     self.M2 = tf.Variable(initial_value=M2_init.astype(np.float32),
                          trainable=not tied, name='M2')
+    self.M3 = tf.Variable(initial_value=M3_init.astype(np.float32),
+                         trainable=True, name='M3')
 
     self.alph = tf.Variable(initial_value=self.alpha0,
                          trainable=True, name='alpha')
@@ -127,7 +132,9 @@ class x_update(layers.Layer):
                          trainable=False, name='rho')
 
   def call(self, y, z, u):
-    x = tf.matmul(self.M1, tf.transpose(y)) + tf.matmul(self.M2, z-u)
+    # x = tf.matmul(self.M1, tf.transpose(y)) + tf.matmul(self.M2, z-u)
+    n = z.shape[0]
+    x = tf.matmul(tf.linalg.diag(self.M3),tf.matmul(self.M2, tf.transpose(y)) + tf.matmul(self.M2, self.rho*(z-u)))
     return self.alph*x + (1-self.alph)*z
     
   def AULA(self,p):

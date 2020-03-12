@@ -48,10 +48,10 @@ if __name__ == "__main__":
   #       print(v.name + ' =', v.numpy())
 
   N = 1000
-  x,y = gen_samples(p.A,1e3,density=0.01, normalize=False)
+  x,y = gen_samples(p.A,1e4,density=0.01, normalize=False)
 
   # ADMM-Net
-  xhat = a.predict_on_batch(y)
+  xhat = a.predict_on_batch(np.matmul(y,A))
   print(10*np.log10(np.mean((np.sum((x-xhat)**2,axis=1)/np.sum(x**2,axis=1)))))
 
   # CVX
