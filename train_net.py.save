@@ -95,7 +95,7 @@ if __name__ == '__main__':
   # sparsity density
   d = 0.05
 
-  x,y = gen_samples(p.A, 5e4,density=d, normalize=False)
+  x,y = gen_samples(p.A, 1e6,density=d, normalize=False)
 
   y = np.matmul(p.A.T.conj(),y.T).T
   data = x,y

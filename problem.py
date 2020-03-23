@@ -35,13 +35,13 @@ class Problem:
       self.A = np.cos(np.pi*m*n/N)
     
     elif scen == 'siso_d':
-      N = 120
+      N = 100
       Ngl = 40
       Ngk = 6
       self.A = np.zeros((N,Ngk*Ngl))
       for l in range(Ngl):
         for k in range(Ngk):
-          self.A[:, l*Ngk + k] = np.cos(np.pi*((l/Ngl)*np.arange(N)+(k/Ngk)*np.arange(N)**2))
+          self.A[:, l*Ngk + k] = np.cos(0.5*np.pi*((l/Ngl)*np.arange(N)+(k/Ngk)*np.arange(N)**2))
     elif (scen == 'mimo'):
       Np = 16 # num pulses
       Ntx = 4
@@ -58,6 +58,23 @@ class Problem:
       htx = np.cos(np.pi*np.outer(np.arange(Ntx),n)/N)
       h = khatri_rao(hrx,htx)
       self.A = np.kron(h,v)
+    elif (scen == 'mimo_d'):
+      N = 100;
+      Ntx = 2;
+      Nrx = 2;
+      # sampling grid
+      M = N*Ntx*Nrx;
+      Ngm = 6; 
+      Ngl = 40;
+      Ngk = 5;
+      self.A = np.zeros((M,Ngm*Ngl*Ngk));
+      for l in range(Ngl):
+          for k in range(Ngk):
+              for m in range(Ngm):
+                  v = np.cos(0.5*np.pi*((l/Ngl)*np.arange(N).T + (m/Ngm)*np.arange(N).T**2));
+                  H = np.outer(np.cos(np.pi*(k/Ngk)*np.arange(Nrx)),np.cos(np.pi*(k/Ngk)*np.arange(Ntx)))
+                  h = H.ravel();
+                  self.A[:, l*Ngm*Ngk + k*Ngm + m] = np.kron(h,v);
 
     # normalize cols
     # self.A = np.matmul(self.A,np.diag(1/np.sqrt(np.sum(self.A**2,axis=0))))

@@ -41,6 +41,8 @@ class ADMMNet(tf.keras.Model):
       self.params_init = {'lambda':0.1 , 'alpha':1. , 'rho':1.}
     elif p.scen == 'mimo':
       self.params_init = {'lambda':0.02 , 'alpha':1. , 'rho':1.}
+    elif p.scen == 'mimo_d':
+      self.params_init = {'lambda':0.1 , 'alpha':1. , 'rho':1.}
     elif p.scen == 'gaussian':
       self.params_init = {'lambda':0.01 , 'alpha':1. , 'rho':1.}
     
