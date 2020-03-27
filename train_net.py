@@ -86,16 +86,16 @@ def print_vars(a):
         print(v.name + ' =', v.numpy())
 
 if __name__ == '__main__':
-  params_init = {'lambda':.3, 'alpha':1.5, 'rho':1.5}
+  params_init = {'lambda':.01, 'alpha':1.99, 'rho':0.5}
 
-  p = problem.Problem((100,200), 'mimo_d')
+  p = problem.Problem((100,200), 'mimo')
   # d = scipy.io.loadmat('matvars.mat')
   # p.A = d['A']
 
   # sparsity density
   d = 0.05
 
-  x,y = gen_samples(p.A, 5e4,density=d, normalize=False)
+  x,y = gen_samples(p.A, 1e5,density=d, normalize=False)
 
   y = np.matmul(p.A.T.conj(),y.T).T
   data = x,y

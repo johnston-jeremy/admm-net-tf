@@ -43,20 +43,25 @@ class Problem:
         for k in range(Ngk):
           self.A[:, l*Ngk + k] = np.cos(0.5*np.pi*((l/Ngl)*np.arange(N)+(k/Ngk)*np.arange(N)**2))
     elif (scen == 'mimo'):
-      Np = 16 # num pulses
-      Ntx = 4
-      Nrx = 4
+      Np = 8 # num pulses
+      Ntx = 2
+      Nrx = 2
       
       M = Np*Ntx*Nrx
-      N = np.round(np.sqrt(2*M))
-      
-      m = np.arange(M)[:,None]
-      n = np.arange(N)
+      # N = np.round(np.sqrt(2*M))
+      N = 2*M
+      N1 = 16
+      N2 = 8
 
-      v = np.cos(np.pi*np.outer(np.arange(Np),n)/N)
-      hrx = np.cos(np.pi*np.outer(np.arange(Nrx),n)/N)
-      htx = np.cos(np.pi*np.outer(np.arange(Ntx),n)/N)
+      m = np.arange(M)[:,None]
+      n1 = np.arange(N1)
+      n2 = np.arange(N2)
+
+      v = np.cos(np.pi*np.outer(np.arange(Np),n1)/N1)
+      hrx = np.cos(np.pi*np.outer(np.arange(Nrx),n2)/N2)
+      htx = np.cos(np.pi*np.outer(np.arange(Ntx),n2)/N2)
       h = khatri_rao(hrx,htx)
+      # self.A = h
       self.A = np.kron(h,v)
     elif (scen == 'mimo_d'):
       N = 100;
