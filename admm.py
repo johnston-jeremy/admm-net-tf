@@ -66,6 +66,7 @@ class ADMMNet(tf.keras.Model):
       print('TIED ADMM-Net with {0} stages and initial parameters:'.format(len(self.Layers)))
     else:
       print('UNTIED ADMM-Net with {0} stages and initial parameters:'.format(len(self.Layers)))
+      
     print('Scenario:','{0}x{1}'.format(p.size(0),p.size(1)),p.scen)
     
     for k,v in self.params_init.items():
@@ -110,9 +111,20 @@ class x_update(layers.Layer):
       M2_init = np.zeros((n,n))
       M3_init = np.zeros((n,))
     else:
-      AULA = self.AULA(p)
-      M1_init = (1/self.rho0)*p.A.T.conj() - (1/self.rho0**2)*np.matmul(AULA,p.A.T.conj())
-      M2_init = (1/self.rho0)*(np.eye(n) - (1/self.rho0)*AULA)
+      if m < n:
+        AULA = self.AULA(p)
+        M1_init = np.matmul(np.eye(n)/self.rho0 - (1/self.rho0**2)*AULA, p.A.T.conj())
+        M2_init = (1/self.rho0)*np.eye(n) - (1/self.rho0**2)*AULA
+      else:
+        # UL = self.invUinvL(p)
+        # M1_init = np.matmul(UL, p.A.T.conj())
+        # M2_init = self.rho0*UL
+        M1_init = np.random.normal(size=(n,m))
+        M2_init = np.random.normal(size=(n,n))
+        # M1_init = la.inv( np.matmul(p.A.T.conj(),p.A) + self.rho0*np.eye(n) ) * p.A.T.conj() 
+        # M2_init = la.inv( np.matmul(p.A.T.conj(),p.A) + self.rho0*np.eye(n) ) * self.rho0
+        # q = Atb + rho*(z - u); 
+        # x = U \ (L \ q);
       # M3_init = np.ones((n,))
 
     if 'tied' in args:
@@ -149,6 +161,13 @@ class x_update(layers.Layer):
     #AULA = (A'*(U \ ( L \ A )));
     return np.matmul(p.A.T.conj(),np.matmul(la.inv(U),np.matmul(la.inv(L),p.A)))
 
+  def invUinvL(self,p):
+    M = p.size(0)
+    N = p.size(1)
+    L = np.linalg.cholesky( np.matmul(p.A.T.conj(),p.A) + self.rho0*np.eye(N))
+    U = L.T.conj()
+    return np.matmul(la.inv(U), la.inv(L))
+
 class z_update(layers.Layer):
 
   def __init__(self, params_init, p, *args, **kwargs):
@@ -159,6 +178,7 @@ class z_update(layers.Layer):
                             trainable=True, name='lambda')
     self.rho = tf.Variable(initial_value=params_init['rho'],
                             trainable=False, name='rho')
+                            
   def call(self, x_1, u):
     return tfp.math.soft_threshold(x_1+u, self.lamb/self.rho)
     # return tf.keras.activations.relu(x_1 + u, alpha=self.lamb/self.rho, max_value=None, threshold=0) - tf.keras.activations.relu(x_1 + u, alpha=-self.lamb/self.rho, max_value=None, threshold=0)

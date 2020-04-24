@@ -31,15 +31,28 @@ class MeanPercentageSquaredError(tf.keras.losses.Loss):
 
 class ISTANet(tf.keras.Model):
   
-  def __init__(self, num_stages = 20, *args, **kwargs):
+  def __init__(self, p, num_stages = 20, *args, **kwargs):
     super().__init__()
-    p = kwargs['problem']
+    self.params_init = {'lambda':0.1}
     self.n1 = p.size(1)
+
+    if 'params_init' in kwargs.keys():
+      for k,v in kwargs['params_init'].items():
+        self.params_init[k] = v
+
+    if 'tied' in args:
+      self.tied = 'tied'
+    elif 'untied' in args:
+      self.tied = 'untied'
 
     self.Layers=[]
     for i in range(num_stages):
-      self.Layers.append(x_update(*args, **kwargs))
+      self.Layers.append(x_update(self.params_init,p,*args))
     
+    print('LISTA-Net with {0} stages and initial parameters:'.format(len(self.Layers)))
+    print('Scenario:','{0}x{1}'.format(p.size(0),p.size(1)),p.scen)
+    for k,v in self.params_init.items():
+      print(k,'=',v)
 
   def call(self, inputs):
     x_0 = np.zeros((self.n1,1),dtype=np.float32)
@@ -51,12 +64,13 @@ class ISTANet(tf.keras.Model):
     
 class x_update(layers.Layer):
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, params_init, p, *args, **kwargs):
     super().__init__()
-    p = kwargs['problem']
+    # p = kwargs['problem']
     m = p.size(0);
     n = p.size(1);
-    beta = 1/np.sum(p.A**2)
+    # beta = 1/np.sum(p.A**2)
+    beta = 1/np.max(np.linalg.eigvals(np.matmul(p.A.T.conj(),p.A)))
     if 'blank' in args:
       B_init = np.zeros((n,m))  
       S_init = np.zeros((n,n))
@@ -64,14 +78,19 @@ class x_update(layers.Layer):
       B_init = beta*p.A.T.conj()
       S_init = np.eye(n) - np.matmul(B_init,p.A)
       
-    lambda_init = p.lambda_init_lista*np.ones((n,1),dtype=np.float32)  
+    # lambda_init = p.lambda_init_lista*np.ones((n,1),dtype=np.float32)  
+
+    if 'tied' in args:
+      tied = True
+    else:
+      tied = False
 
     self.S = tf.Variable(initial_value=S_init.astype(np.float32),
-                         trainable=False, name='S')
+                         trainable=not tied, name='S')
     self.B = tf.Variable(initial_value=B_init.astype(np.float32),
-                         trainable=False, name='B')
+                         trainable=not tied, name='B')
 
-    self.lamb = tf.Variable(initial_value=lambda_init,
+    self.lamb = tf.Variable(initial_value=params_init['lambda'],
                             trainable=True, name='lambda')
                           
 
