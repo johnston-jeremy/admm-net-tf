@@ -34,17 +34,23 @@ class Problem:
       m = np.arange(M)[:,None]
       n = np.arange(N)
       # self.A = np.cos(np.pi*m*n/N)
-      self.A = np.exp(1j*2*np.pi*m*n/N)
+      self.A = np.exp(1j*2*np.pi*m*n/N)/np.sqrt(M)
+      # self.A = np.exp(1j*2*np.pi*m*n/N)
     
     elif scen == 'siso_d':
-      N = 8
-      Ngl = 5
-      Ngk = 3
+      # N = 8
+      # Ngl = 5 # range
+      # Ngk = 3 # doppler
+
+      N = 20
+      Ngl = 10 # range
+      Ngk = 4 # doppler
+
       self.A = np.zeros((N,Ngk*Ngl),dtype=np.complex128)
       for l in range(Ngl):
         for k in range(Ngk):
           # self.A[:, l*Ngk + k] = np.cos(np.pi*((l/Ngl)*np.arange(N)+(k/Ngk)*np.arange(N)**2))
-          self.A[:, l*Ngk + k] = np.exp(1j*np.pi*((l/Ngl)*np.arange(N)+(k/Ngk)*np.arange(N)**2))
+          self.A[:, l*Ngk + k] = np.exp(1j*np.pi*((l/Ngl)*np.arange(N)+(k/Ngk)*np.arange(N)**2))/np.sqrt(N)
 
     elif (scen == 'mimo_real'):
       Np = 3
@@ -121,14 +127,32 @@ class Problem:
 
     elif (scen == 'mimo_d'):
       
-      N = 4;
+      # N = 4;
+      # Ntx = 2;
+      # Nrx = 1;
+      # # sampling grid
+      # M = N*Ntx*Nrx;
+      # Ngm = 2; 
+      # Ngl = 3;
+      # Ngk = 3;
+
+      # N = 2;
+      # Ntx = 2;
+      # Nrx = 2;
+      # # sampling grid
+      # M = N*Ntx*Nrx;
+      # Ngm = 2; 
+      # Ngl = 2;
+      # Ngk = 4;
+
+      N = 5;
       Ntx = 2;
-      Nrx = 1;
+      Nrx = 2;
       # sampling grid
       M = N*Ntx*Nrx;
-      Ngm = 2; 
-      Ngl = 3;
-      Ngk = 3;
+      Ngm = 2; # doppler 
+      Ngl = 5; # range
+      Ngk = 4; # DoA
 
       nn = np.arange(N)
       nrx = np.arange(Nrx)
@@ -141,7 +165,7 @@ class Problem:
                   v = np.exp(1j*np.pi*((l/Ngl)*nn.T + (m/Ngm)*nn.T**2));
                   H = np.outer(np.exp(1j*2*np.pi*(k/Ngk)*nrx),np.exp(1j*2*np.pi*(k/Ngk)*ntx))
                   h = H.ravel();
-                  self.A[:, l*Ngm*Ngk + k*Ngm + m] = np.kron(h,v);
+                  self.A[:, l*Ngm*Ngk + k*Ngm + m] = np.kron(h,v)/np.sqrt(N*Ntx*Nrx);
     
     elif scen == 'yin':
       # dimensions of the sparse signal x
@@ -183,8 +207,13 @@ class Problem:
         # print(A[index, i])    
       self.A = A
 
+    # normalize columns
+    # self.A = np.matmul(self.A,np.diag(1/np.sqrt(np.sum(self.A**2,axis=0))))
+
     if self.partition == True:
       self.A = np.concatenate((self.A, np.eye(np.shape(self.A)[0])),axis=1)
+
+    
 
     return
 

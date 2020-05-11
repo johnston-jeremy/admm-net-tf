@@ -30,6 +30,18 @@ class MeanPercentageSquaredError(tf.keras.losses.Loss):
       y_true_norm = tf.math.reduce_sum(math_ops.square(y_true),axis=-1)
       return K.mean(tf.math.divide(err_norm,y_true_norm))
 
+class SDR(tf.keras.losses.Loss):
+    def call(self, y_true, y_pred):
+      y_pred = ops.convert_to_tensor(y_pred)
+      y_true = math_ops.cast(y_true, y_pred.dtype)
+      xx = tf.math.reduce_sum(math_ops.square(y_pred),axis=-1)
+      yy = tf.math.reduce_sum(math_ops.square(y_true),axis=-1)
+      xxyy = tf.math.multiply(xx,yy)
+      xy = math_ops.square(tf.math.reduce_sum(tf.math.multiply_no_nan(y_true,y_pred),axis=-1))
+      # err_norm = tf.math.reduce_sum(math_ops.square(y_pred - y_true),axis=-1)
+      # y_true_norm = tf.math.reduce_sum(math_ops.square(y_true),axis=-1)
+      return K.mean(tf.math.divide_no_nan(xx,xy))
+
 class ADMMNet(tf.keras.Model):
   
   def __init__(self, p, num_stages, *args, **kwargs):
@@ -61,6 +73,8 @@ class ADMMNet(tf.keras.Model):
     self.Layers=[]
     for i in range(num_stages):
       self.Layers.append(Stage(self.params_init, p, *args))
+
+    # self.add_metric()
     
     if 'blank' in args:
       print('BLANK ADMM-Net with {0} stages'.format(len(self.Layers)))
@@ -167,6 +181,7 @@ class Stage(layers.Layer):
       zc = self.z_update_partition(v)
     else:
       zc = self.z_update_no_partition(v)
+      # z = self.soft_thresh_real(x+u, self.lamb/self.rho)
 
     z = self.comp2re(zc)
 
@@ -176,12 +191,12 @@ class Stage(layers.Layer):
     return z,u
   
   def z_update_partition(self, v):
-    z1 = self.soft_thresh(v[:self.p.N_part], self.lamb/self.rho)
-    z2 = self.soft_thresh(v[self.p.N_part:], self.lamb2/self.rho)
+    z1 = self.soft_thresh_complex(v[:self.p.N_part], self.lamb/self.rho)
+    z2 = self.soft_thresh_complex(v[self.p.N_part:], self.lamb2/self.rho)
     return tf.concat((z1,z2),axis=0)
 
   def z_update_no_partition(self, v):
-    return self.soft_thresh(v, self.lamb/self.rho)
+    return self.soft_thresh_complex(v, self.lamb/self.rho)
 
   def comp2re(self, x):
     return tf.concat((x[:,0],x[:,1]), axis=0)
@@ -197,7 +212,7 @@ class Stage(layers.Layer):
     
     return tf.concat((x_re[:,None],x_im[:,None]), axis=1)
 
-  def soft_thresh(self, x, kappa):
+  def soft_thresh_complex(self, x, kappa):
     # x is a shape (N,2) array whose rows correspond to complex numbers
     # returns shape (N,2) array corresponding to complex numbers
 
@@ -207,17 +222,23 @@ class Stage(layers.Layer):
     # x2 = x[ndiv2:]
     # xx = tf.concat((x1[:,None],x2[:,None]), axis=1)
     
-    x1 = x[:,0]
-    x2 = x[:,1]
+    x_re = x[:,0]
+    x_im = x[:,1]
 
     norm = tf.norm(x,axis=1)
-    x1normalized = tf.math.divide_no_nan(x1,norm)
-    x2normalized = tf.math.divide_no_nan(x2,norm)
+    x_re_normalized = tf.math.divide_no_nan(x_re,norm)
+    x_im_normalized = tf.math.divide_no_nan(x_im,norm)
 
-    z1 = tf.math.multiply(x1normalized,tf.maximum(norm - kappa,0))
-    z2 = tf.math.multiply(x2normalized,tf.maximum(norm - kappa,0))
+    z_re = tf.math.multiply(x_re_normalized,tf.maximum(norm - kappa,0))
+    z_im = tf.math.multiply(x_im_normalized,tf.maximum(norm - kappa,0))
 
-    return tf.concat((z1[:,None],z2[:,None]),axis=1)
+    return tf.concat((z_re[:,None],z_im[:,None]),axis=1)
+
+  def soft_thresh_real(self, x, kappa):
+    # x is a shape (N,) array of real numbers
+    # returns shape (N,) array of real numbers
+
+    return tfp.math.soft_threshold(x,kappa)
 
 class x_update(layers.Layer):
 
