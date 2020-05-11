@@ -113,7 +113,7 @@ def print_vars(a):
         print(v.name + ' =', v.numpy())
 
 if __name__ == '__main__':
-  params_init = {'lambda':1e-4 , 'alpha':1.9 , 'rho':1e-2}
+  params_init = {'lambda':4e-4 , 'alpha':1.9 , 'rho':3e-5}
   # params_init = {'lambda':[], 'alpha':1.5, 'rho':1.5}
 
   p = problem.Problem((16,32), 'mimo')
